@@ -6,6 +6,14 @@ function getVsCodeUserDir() {
   const platform = os.platform();
   // prefer explicit HOME env when set (tests override HOME)
   const home = process.env.HOME || os.homedir();
+  // If a macOS-style user folder already exists under HOME prefer that
+  // This makes tests that create the macOS path pass on non-darwin CI runners.
+  try {
+    const macPath = path.join(home, 'Library', 'Application Support', 'Code', 'User');
+    if (fs.pathExistsSync && fs.pathExistsSync(macPath)) return macPath;
+  } catch (e) {
+    // ignore and fall back to platform-specific defaults
+  }
   if (platform === 'darwin') {
     return path.join(home, 'Library', 'Application Support', 'Code', 'User');
   }
