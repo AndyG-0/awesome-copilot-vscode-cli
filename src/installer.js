@@ -66,26 +66,10 @@ async function installFiles({ items, type, target, workspaceDir }) {
     return base;
   }
 
-  // user target: write into VS Code User prompts folder if prompts, otherwise create structure under VS Code User/.github
+  // user target: write all types into the VS Code User 'prompts' folder so user profile
+  // keeps everything together (per user's requested behavior).
   const userDir = getVsCodeUserDir();
-  if (type === 'prompts') {
-    const base = path.join(userDir, 'prompts');
-    await fs.ensureDir(base);
-    const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
-    for (const item of items) {
-      let filenameBase = item.id || item.name || `item-${Date.now()}`;
-      if (idCounts[filenameBase] > 1 && item.repo) filenameBase = `${item.repo}-${filenameBase}`;
-      const destName = `${filenameBase}${extForType(type)}`;
-      const dest = path.join(base, destName);
-      let content = await fetchRawIfNeeded(item) || item.content || JSON.stringify(item, null, 2);
-      if (typeof content !== 'string') content = JSON.stringify(content, null, 2);
-      await fs.writeFile(dest, content, 'utf8');
-    }
-    return base;
-  }
-
-  // For other types, create .github subfolder in userDir
-  const base = path.join(userDir, '.github', type);
+  const base = path.join(userDir, 'prompts');
   await fs.ensureDir(base);
   // detect duplicates among items to avoid overwriting
   const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
@@ -131,7 +115,8 @@ async function removeFiles({ names, type, target, workspaceDir }) {
   }
 
   const userDir = getVsCodeUserDir();
-  const base = (type === 'prompts') ? path.join(userDir, 'prompts') : path.join(userDir, '.github', type);
+  // All user-target files live in the VS Code User 'prompts' folder now
+  const base = path.join(userDir, 'prompts');
   if (!(await fs.pathExists(base))) return 0;
   const files = await fs.readdir(base);
   let removed = 0;

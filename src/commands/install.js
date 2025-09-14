@@ -219,8 +219,8 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
       continue;
     }
 
-    // If no specific names requested and the type is chatmodes or prompts, confirm installing all
-    if ((!names || names.length === 0) && (t === 'chatmodes' || t === 'prompts')) {
+  // If no specific names requested and the type is chatmodes, prompts, or instructions, confirm installing all
+  if ((!names || names.length === 0) && (t === 'chatmodes' || t === 'prompts' || t === 'instructions')) {
       // When running non-interactively (no TTY), auto-confirm so CI/tests proceed
       const nonInteractive = !(process.stdin && process.stdin.isTTY);
       if (!nonInteractive) {
