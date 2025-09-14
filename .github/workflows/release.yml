@@ -1,5 +1,14 @@
 name: Release
 
+# Best practices:
+# - Bump the package version locally with `npm version <major|minor|patch>` which creates a git tag.
+#   Then push the tag: `git push --follow-tags` (or `git push origin vX.Y.Z`).
+# - Alternatively, use a release manager like `semantic-release` to automate versioning and changelogs.
+# - This workflow runs when a tag matching `v*.*.*` is pushed. Ensure you create/tag using the v-prefixed semver format.
+# - Secrets required:
+#   - `NPM_TOKEN` (used for npm publish)
+#   - The default `GITHUB_TOKEN` is provided automatically by Actions for creating releases.
+
 on:
   push:
     tags:
@@ -8,8 +17,15 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Minimal permissions required for publishing to npm and creating a release
+    permissions:
+      contents: write # needed to create a release
+      packages: write # not strictly required for npm but useful if you use GitHub Packages
     steps:
+      # Fetch full history so tags and changelog generation work correctly
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -23,3 +39,12 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish
+      - name: Create GitHub Release
+        # Create a GitHub Release for the pushed tag. Uses the git ref by default.
+        uses: ncipollo/release-action@v1
+        with:
+          # Generate release notes automatically based on merged PRs and commits
+          generateReleaseNotes: true
+          # Use the tag from the push event (no need to pass 'tag')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
