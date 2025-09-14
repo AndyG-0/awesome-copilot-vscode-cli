@@ -1,6 +1,6 @@
 {
   "name": "acp-vscode",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "CLI to install GitHub Awesome Copilot chatmodes, prompts, and instructions into VS Code workspace or user profile",
   "bin": {
     "acp-vscode": "./bin/acp-vscode.js"
