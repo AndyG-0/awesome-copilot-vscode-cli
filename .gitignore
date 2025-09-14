@@ -4,3 +4,4 @@ coverage/
 .env
 .acp-cache/
 jest-output.json
+cache/

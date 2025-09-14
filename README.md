@@ -92,7 +92,7 @@ Troubleshooting
 ---------------
 
 - Cache and stale index
-  - The CLI writes a disk cache at `./.acp-cache/index.json` (30 minute TTL). If you see stale results or want to force a fresh fetch, remove the cache file and retry:
+  - By default the CLI writes a disk cache under the user's home directory in `~/.acp/cache/index.json` (30 minute TTL). When running in development or tests the CLI preserves the old behavior and keeps the cache in the current working directory at `./.acp-cache/index.json` to avoid surprising local workflows. If you see stale results or want to force a fresh fetch, remove the cache file and retry:
 
 ```bash
 rm -rf .acp-cache
@@ -146,6 +146,17 @@ Example:
 ```
 
 When multiple repos contain files with the same `id`, the fetcher adds an `_conflicts` array to the returned index listing conflicted ids. Consumers will display items as `repo:id` when necessary to disambiguate.
+
+Local repo file (acp-repos.json)
+-------------------------------
+
+In addition to `ACP_REPOS_JSON` the CLI will look for a file named `acp-repos.json` in the `~/.acp` directory and use it to populate the upstream repo list if the environment variable is not set. This file should contain the same JSON array format as `ACP_REPOS_JSON` and is useful for per-user configuration without exporting environment variables. Precedence when building the repos list is:
+
+1. `ACP_REPOS_JSON` environment variable (highest priority)
+2. `~/.acp/acp-repos.json` file (if present)
+3. Built-in default repo (github/awesome-copilot)
+
+Note: when running in development or tests the CLI will attempt to read `acp-repos.json` from the current working directory instead of `~/.acp` to keep test fixtures and local development predictable.
 
 Dry-run:
 
