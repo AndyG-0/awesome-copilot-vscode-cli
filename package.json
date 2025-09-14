@@ -21,12 +21,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/acp-vscode.git"
+    "url": "git+https://github.com/AndyG-0/awesome-copilot-vscode-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/acp-vscode/issues"
+    "url": "https://github.com/AndyG-0/awesome-copilot-vscode-cli/issues"
   },
-  "homepage": "https://github.com/your-org/acp-vscode#readme",
+  "homepage": "https://github.com/AndyG-0/awesome-copilot-vscode-cli#readme",
   "publishConfig": {
     "access": "public"
   },
