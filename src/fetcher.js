@@ -1,7 +1,17 @@
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs-extra');
+const os = require('os');
 const cache = require('./cache');
+
+// Helper to consistently decide where to store user-level data. In
+// development and test environments prefer process.cwd() for predictable
+// local workflows; otherwise use the user's homedir under ~/.acp.
+function getBaseDir() {
+  return (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')
+    ? process.cwd()
+    : path.join(os.homedir(), '.acp');
+}
 
 // Default single upstream repo for backwards compatibility
 const DEFAULT_REPOS = [
@@ -16,8 +26,7 @@ function diskPaths() {
   // In development and tests keep the old behavior (cwd) to avoid surprising
   // local workflows and test expectations. Otherwise store cache under the
   // user's home directory in ~/.acp/cache/index.json
-  const useCwd = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
-  const baseDir = useCwd ? process.cwd() : path.join(require('os').homedir(), '.acp');
+  const baseDir = getBaseDir();
   const DISK_CACHE_DIR = path.join(baseDir, 'cache');
   const DISK_CACHE_FILE = path.join(DISK_CACHE_DIR, 'index.json');
   return { DISK_CACHE_DIR, DISK_CACHE_FILE };
@@ -86,10 +95,8 @@ async function fetchIndex() {
     }
   } else {
     // Try reading acp-repos.json from the user acp dir. Respect NODE_ENV handling
-    try {
-      const baseDir = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')
-        ? process.cwd()
-        : path.join(require('os').homedir(), '.acp');
+      try {
+      const baseDir = getBaseDir();
       const repoFile = path.join(baseDir, 'acp-repos.json');
       if (await fs.pathExists(repoFile)) {
         const fileContents = await fs.readJson(repoFile);
