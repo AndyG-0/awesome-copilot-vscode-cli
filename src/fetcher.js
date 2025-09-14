@@ -13,7 +13,12 @@ const DEFAULT_REPOS = [
 ];
 
 function diskPaths() {
-  const DISK_CACHE_DIR = path.join(process.cwd(), '.acp-cache');
+  // In development and tests keep the old behavior (cwd) to avoid surprising
+  // local workflows and test expectations. Otherwise store cache under the
+  // user's home directory in ~/.acp/cache/index.json
+  const useCwd = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+  const baseDir = useCwd ? process.cwd() : path.join(require('os').homedir(), '.acp');
+  const DISK_CACHE_DIR = path.join(baseDir, 'cache');
   const DISK_CACHE_FILE = path.join(DISK_CACHE_DIR, 'index.json');
   return { DISK_CACHE_DIR, DISK_CACHE_FILE };
 }
@@ -70,7 +75,7 @@ async function fetchIndex() {
     }
   }
 
-  // Build repos list from env or default
+  // Build repos list from env, file, or default
   let repos = DEFAULT_REPOS;
   if (process.env.ACP_REPOS_JSON) {
     try {
@@ -78,6 +83,20 @@ async function fetchIndex() {
       if (Array.isArray(parsed) && parsed.length > 0) repos = parsed;
     } catch (e) {
       // ignore malformed env var and fall back to defaults
+    }
+  } else {
+    // Try reading acp-repos.json from the user acp dir. Respect NODE_ENV handling
+    try {
+      const baseDir = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')
+        ? process.cwd()
+        : path.join(require('os').homedir(), '.acp');
+      const repoFile = path.join(baseDir, 'acp-repos.json');
+      if (await fs.pathExists(repoFile)) {
+        const fileContents = await fs.readJson(repoFile);
+        if (Array.isArray(fileContents) && fileContents.length > 0) repos = fileContents;
+      }
+    } catch (e) {
+      // ignore file read/parse errors and fall back to defaults
     }
   }
 
