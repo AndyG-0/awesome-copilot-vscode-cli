@@ -215,4 +215,13 @@ async function fetchIndex() {
   }
 }
 
-module.exports = { fetchIndex, diskPaths };
+async function cacheExists() {
+  try {
+    const { DISK_CACHE_FILE } = diskPaths();
+    return await fs.pathExists(DISK_CACHE_FILE);
+  } catch (e) {
+    return false;
+  }
+}
+
+module.exports = { fetchIndex, diskPaths, cacheExists };

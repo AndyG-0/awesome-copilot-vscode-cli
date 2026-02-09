@@ -1,4 +1,4 @@
-const { fetchIndex, diskPaths } = require('../fetcher');
+const { fetchIndex, diskPaths, cacheExists } = require('../fetcher');
 const cache = require('../cache');
 const fs = require('fs-extra');
 const { formatListLines, visibleLines } = require('./list');
@@ -27,6 +27,13 @@ function searchCommand(cli) {
       let index = cache.get(key);
       if (!index) {
         try {
+          // Check if disk cache exists to determine if this is a fresh fetch
+          const diskCacheExists = await cacheExists();
+          
+          if (!diskCacheExists && !options.refresh) {
+            console.log('Updating cache for the first time... (use -r to force refresh)');
+          }
+          
           index = await fetchIndex();
           cache.set(key, index);
         } catch (err) {

@@ -1,5 +1,5 @@
 const prompts = require('prompts');
-const { fetchIndex, diskPaths } = require('../fetcher');
+const { fetchIndex, diskPaths, cacheExists } = require('../fetcher');
 const cache = require('../cache');
 const { installFiles } = require('../installer');
 const fs = require('fs-extra');
@@ -40,6 +40,13 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
   let index = cache.get(key);
   if (!index) {
     try {
+      // Check if disk cache exists to determine if this is a fresh fetch
+      const diskCacheExists = await cacheExists();
+      
+      if (!diskCacheExists && !doRefresh) {
+        console.log('Updating cache for the first time... (use -r to force refresh)');
+      }
+      
       index = await fetchIndex();
       cache.set(key, index);
     } catch (err) {
