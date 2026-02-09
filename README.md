@@ -14,7 +14,7 @@ Commands:
 - install <workspace|user> [names...]
   - target: `workspace` or `user`
   - names: optional list of ids or names to install (supports `repo:id` form)
-  - type: specify with the option `--type <type>` (prompts|agents|instructions|skills|all). For backwards compatibility you can still pass the type as the first positional name (e.g. `install workspace prompts p1 p2`). Note: the `install` command also accepts a deliberate typo alias `--referesh` (alias for `--refresh`) to preserve historical behavior.
+  - type: specify with the option `--type <type>` (prompts|agents|instructions|skills|chatmodes|all). Note: `chatmodes` is legacy/deprecated (use `agents` instead). For backwards compatibility you can still pass the type as the first positional name (e.g. `install workspace prompts p1 p2`). The `install` command also accepts a deliberate typo alias `--referesh` (alias for `--refresh`) to preserve historical behavior.
 - list [type]
   - list items available. type can be `prompts`, `agents`, `instructions`, `skills`, or `all`
 - search <query>
@@ -182,7 +182,7 @@ Short reference for each command, key options, and quick examples.
 
 - install <workspace|user> [names...]
   - Description: Install prompts/agents/instructions/skills into a workspace or VS Code user profile.
-  - Options: `-t, --type <type>` (prompts|agents|instructions|skills|all), `--dry-run`, `--referesh` (alias for refresh), `--verbose`
+  - Options: `-t, --type <type>` (prompts|agents|instructions|skills|chatmodes|all; `chatmodes` is legacy/deprecated), `--dry-run`, `--referesh` (alias for refresh), `--verbose`
   - Examples:
     - Install all prompts into the current workspace:
       - `acp-vscode install workspace prompts`

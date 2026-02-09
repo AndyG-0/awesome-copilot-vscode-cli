@@ -44,7 +44,7 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
       const diskCacheExists = await cacheExists();
       
       if (!diskCacheExists && !doRefresh) {
-        console.log('Updating cache for the first time... (use -r to force refresh)');
+        console.log('Updating cache for the first time... (use --refresh/--referesh to force refresh)');
       }
       
       index = await fetchIndex();
