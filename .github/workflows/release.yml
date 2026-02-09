@@ -21,6 +21,8 @@ jobs:
     permissions:
       contents: write # needed to create a release
       packages: write # not strictly required for npm but useful if you use GitHub Packages
+      id-token: write  # Required for OIDC
+
     steps:
       # Fetch full history so tags and changelog generation work correctly
       - uses: actions/checkout@v4
