@@ -190,7 +190,7 @@ Short reference for each command, key options, and quick examples.
       - `acp-vscode install user --type instructions "Instruction Name"`
 
 - list [type]
-  - Description: List available items. Type can be `prompts`, `agents`, `instructions`, `skills`, or `all` (default).
+  - Description: List available items. Type can be `prompts`, `agents`, `instructions`, `skills`, `chatmodes` (legacy), or `all` (default).
   - Options: `-r, --refresh` (clear caches and refetch), `-j, --json`, `--verbose`
   - Examples:
     - `acp-vscode list agents`
