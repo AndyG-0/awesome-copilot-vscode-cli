@@ -55,7 +55,7 @@ else
 fi
 
 # Display current version
-CURRENT_VERSION=$(jq -r '.version' package.json)
+CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${YELLOW}Current version: ${CURRENT_VERSION}${NC}"
 
 # Use npm version to bump version and create tag
@@ -63,7 +63,7 @@ echo -e "${YELLOW}Bumping version (${VERSION_TYPE})...${NC}"
 npm version "$VERSION_TYPE"
 
 # Get the new version
-NEW_VERSION=$(jq -r '.version' package.json)
+NEW_VERSION=$(node -p "require('./package.json').version")
 echo -e "${GREEN}✓ Version bumped to ${NEW_VERSION}${NC}"
 
 # Get the tag that was created
