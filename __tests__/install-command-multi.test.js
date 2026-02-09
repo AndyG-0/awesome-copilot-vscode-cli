@@ -1,7 +1,6 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
-const axios = require('axios');
 jest.mock('axios');
 
 let performInstall;
