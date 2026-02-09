@@ -31,9 +31,10 @@ fi
 echo -e "${YELLOW}Starting release process...${NC}"
 
 # Check if working directory is clean
-if ! git diff-index --quiet HEAD --; then
-    echo -e "${RED}Error: Working directory has uncommitted changes${NC}"
+if [ -n "$(git status --porcelain)" ]; then
+    echo -e "${RED}Error: Working directory is not clean${NC}"
     echo "Please commit or stash your changes before releasing."
+    git status --short
     exit 1
 fi
 
@@ -48,8 +49,14 @@ npm test || {
 echo -e "${GREEN}✓ Tests passed${NC}"
 
 # Run linting if available
-if npm run lint 2>/dev/null; then
-    echo -e "${GREEN}✓ Linting passed${NC}"
+if node -p "require('./package.json').scripts?.lint" 2>/dev/null | grep -v "undefined" >/dev/null; then
+    echo -e "${YELLOW}Running lint...${NC}"
+    if npm run lint; then
+        echo -e "${GREEN}✓ Linting passed${NC}"
+    else
+        echo -e "${RED}Error: Linting failed${NC}"
+        exit 1
+    fi
 else
     echo -e "${YELLOW}⚠ Linting not available (skipping)${NC}"
 fi
