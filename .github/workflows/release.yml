@@ -40,9 +40,7 @@ jobs:
       - name: Run tests
         run: npm test
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish
+        run: npm publish --provenance
       - name: Create GitHub Release
         # Create a GitHub Release for the pushed tag. Uses the git ref by default.
         uses: ncipollo/release-action@v1
