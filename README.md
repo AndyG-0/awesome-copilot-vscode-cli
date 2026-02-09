@@ -16,7 +16,7 @@ Commands:
   - names: optional list of ids or names to install (supports `repo:id` form)
   - type: specify with the option `--type <type>` (prompts|agents|instructions|skills|chatmodes|all). Note: `chatmodes` is legacy/deprecated (use `agents` instead). For backwards compatibility you can still pass the type as the first positional name (e.g. `install workspace prompts p1 p2`). The `install` command also accepts a deliberate typo alias `--referesh` (alias for `--refresh`) to preserve historical behavior.
 - list [type]
-  - list items available. type can be `prompts`, `agents`, `instructions`, `skills`, or `all`
+  - list items available. type can be `prompts`, `agents`, `instructions`, `skills`, `chatmodes` (legacy), or `all`
 - search <query>
   - search across items
 - uninstall <workspace|user> <type> [names...]
