@@ -25,11 +25,13 @@ function getVsCodeUserDir() {
 }
 
 async function installFiles({ items, type, target, workspaceDir }) {
-  // type: prompts|chatmodes|instructions
+  // type: prompts|chatmodes|agents|instructions|skills
   // Helper to derive filename and extension
   const extForType = t => {
     if (t === 'chatmodes') return '.chatmode.md';
+    if (t === 'agents') return '.agent.md';
     if (t === 'instructions' || t === 'instruction') return '.instructions.md';
+    if (t === 'skills') return '.md'; // skills typically use plain .md
     return '.prompt.md';
   };
 

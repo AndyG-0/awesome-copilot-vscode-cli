@@ -1,6 +1,6 @@
 # acp-vscode
 
-acp-vscode is a small CLI to fetch and install chatmodes, prompts and instructions from the GitHub "awesome-copilot" repository into your VS Code workspace or VS Code User profile.
+acp-vscode is a small CLI to fetch and install agents, prompts, instructions and skills from the GitHub "awesome-copilot" repository into your VS Code workspace or VS Code User profile.
 
 Install (when published):
 
@@ -14,9 +14,9 @@ Commands:
 - install <workspace|user> [names...]
   - target: `workspace` or `user`
   - names: optional list of ids or names to install (supports `repo:id` form)
-  - type: specify with the option `--type <type>` (prompts|chatmodes|instructions|all). For backwards compatibility you can still pass the type as the first positional name (e.g. `install workspace prompts p1 p2`). Note: the `install` command also accepts a deliberate typo alias `--referesh` (alias for `--refresh`) to preserve historical behavior.
+  - type: specify with the option `--type <type>` (prompts|agents|instructions|skills|chatmodes|all). Note: `chatmodes` is legacy/deprecated (use `agents` instead). For backwards compatibility you can still pass the type as the first positional name (e.g. `install workspace prompts p1 p2`). The `install` command also accepts a deliberate typo alias `--referesh` (alias for `--refresh`) to preserve historical behavior.
 - list [type]
-  - list items available. type can be `prompts`, `chatmodes`, `instructions`, or `all`
+  - list items available. type can be `prompts`, `agents`, `instructions`, `skills`, `chatmodes` (legacy), or `all`
 - search <query>
   - search across items
 - uninstall <workspace|user> <type> [names...]
@@ -126,7 +126,9 @@ You can inject a full, pre-built index via the `ACP_INDEX_JSON` environment vari
 {
   "prompts": [{ "id": "p1", "name": "Prompt 1", "repo": "r1", "url": "https://..." }],
   "chatmodes": [],
-  "instructions": []
+  "agents": [],
+  "instructions": [],
+  "skills": []
 }
 ```
 
@@ -179,8 +181,8 @@ Commands reference
 Short reference for each command, key options, and quick examples.
 
 - install <workspace|user> [names...]
-  - Description: Install prompts/chatmodes/instructions into a workspace or VS Code user profile.
-  - Options: `-t, --type <type>` (prompts|chatmodes|instructions|all), `--dry-run`, `--referesh` (alias for refresh), `--verbose`
+  - Description: Install prompts/agents/instructions/skills into a workspace or VS Code user profile.
+  - Options: `-t, --type <type>` (prompts|agents|instructions|skills|chatmodes|all; `chatmodes` is legacy/deprecated), `--dry-run`, `--referesh` (alias for refresh), `--verbose`
   - Examples:
     - Install all prompts into the current workspace:
       - `acp-vscode install workspace prompts`
@@ -188,10 +190,10 @@ Short reference for each command, key options, and quick examples.
       - `acp-vscode install user --type instructions "Instruction Name"`
 
 - list [type]
-  - Description: List available items. Type can be `prompts`, `chatmodes`, `instructions`, or `all` (default).
+  - Description: List available items. Type can be `prompts`, `agents`, `instructions`, `skills`, `chatmodes` (legacy), or `all` (default).
   - Options: `-r, --refresh` (clear caches and refetch), `-j, --json`, `--verbose`
   - Examples:
-    - `acp-vscode list chatmodes`
+    - `acp-vscode list agents`
     - `acp-vscode list --json`
 
 - search <query>
