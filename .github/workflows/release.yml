@@ -5,9 +5,9 @@ name: Release
 #   Then push the tag: `git push --follow-tags` (or `git push origin vX.Y.Z`).
 # - Alternatively, use a release manager like `semantic-release` to automate versioning and changelogs.
 # - This workflow runs when a tag matching `v*.*.*` is pushed. Ensure you create/tag using the v-prefixed semver format.
-# - Secrets required:
-#   - `NPM_TOKEN` (used for npm publish)
-#   - The default `GITHUB_TOKEN` is provided automatically by Actions for creating releases.
+# - This workflow uses Trusted Publishing (OIDC) for npm - no NPM_TOKEN secret needed!
+# - Provenance attestations are automatically generated when using trusted publishing.
+# - The default `GITHUB_TOKEN` is provided automatically by Actions for creating releases.
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       - name: Install
         run: npm ci
@@ -40,7 +40,7 @@ jobs:
       - name: Run tests
         run: npm test
       - name: Publish to npm
-        run: npm publish --provenance
+        run: npm publish
       - name: Create GitHub Release
         # Create a GitHub Release for the pushed tag. Uses the git ref by default.
         uses: ncipollo/release-action@v1
