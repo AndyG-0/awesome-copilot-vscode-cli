@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const { formatListLines, visibleLines } = require('./list');
 
 function searchCommand(cli) {
-  cli.command('search <query>', 'Search prompts, chatmodes, instructions')
+  cli.command('search <query>', 'Search prompts, chatmodes, agents, instructions, skills')
     .option('-r, --refresh', 'Clear caches and force refresh from remote')
     .option('-j, --json', 'Emit machine-readable JSON output')
     .action(async (query, options) => {
@@ -37,7 +37,7 @@ function searchCommand(cli) {
       }
       const q = query.toLowerCase();
       const results = [];
-      ['prompts','chatmodes','instructions'].forEach(cat => {
+      ['prompts','chatmodes','agents','instructions','skills'].forEach(cat => {
         const arr = index[cat] || [];
         arr.forEach(item => {
           const name = (item.name || item.id || '').toLowerCase();
@@ -66,7 +66,7 @@ function searchCommand(cli) {
 function searchIndex(index, query) {
   const q = query.toLowerCase();
   const results = [];
-  ['prompts','chatmodes','instructions'].forEach(cat => {
+  ['prompts','chatmodes','agents','instructions','skills'].forEach(cat => {
     const arr = index[cat] || [];
     arr.forEach(item => {
       const name = (item.name || item.id || '').toLowerCase();

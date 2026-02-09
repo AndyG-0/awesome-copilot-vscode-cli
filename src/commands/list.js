@@ -18,14 +18,20 @@ function formatItems(index, filter) {
   if (!filter || filter === 'all' || filter === 'chatmodes') {
     if (index.chatmodes) out.push(...index.chatmodes.map(c => ({ type: 'chatmode', id: displayId(c), name: c.name })));
   }
+  if (!filter || filter === 'all' || filter === 'agents') {
+    if (index.agents) out.push(...index.agents.map(a => ({ type: 'agent', id: displayId(a), name: a.name })));
+  }
   if (!filter || filter === 'all' || filter === 'instructions') {
     if (index.instructions) out.push(...index.instructions.map(i => ({ type: 'instruction', id: displayId(i), name: i.name })));
+  }
+  if (!filter || filter === 'all' || filter === 'skills') {
+    if (index.skills) out.push(...index.skills.map(s => ({ type: 'skill', id: displayId(s), name: s.name })));
   }
   return out;
 }
 
 function listCommand(cli) {
-  cli.command('list [type]', 'List available items (prompts, chatmodes, instructions, all)')
+  cli.command('list [type]', 'List available items (prompts, chatmodes, agents, instructions, skills, all)')
     .option('-r, --refresh', 'Clear caches and force refresh from remote')
     .option('-j, --json', 'Emit machine-readable JSON output')
     .action(async (type, options) => {

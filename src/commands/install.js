@@ -8,7 +8,7 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
   // support shorthand: if first arg is a package name (not 'workspace'|'user'),
   // treat it as package-mode and default target to 'workspace'.
   const key = 'index';
-  const TYPES = ['prompts','chatmodes','instructions','all'];
+  const TYPES = ['prompts','chatmodes','agents','instructions','skills','all'];
   const isTargetValid = (target === 'workspace' || target === 'user');
   let packageMode = false;
   if (!isTargetValid) {
@@ -48,7 +48,7 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
     }
   }
 
-  const types = (type === 'all' || !type) ? ['prompts','chatmodes','instructions'] : [type];
+  const types = (type === 'all' || !type) ? ['prompts','chatmodes','agents','instructions','skills'] : [type];
   let anyFound = false;
   const missingNames = new Set();
   // If multiple types are being considered and names provided, resolve names across types
@@ -219,8 +219,8 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
       continue;
     }
 
-  // If no specific names requested and the type is chatmodes, prompts, or instructions, confirm installing all
-  if ((!names || names.length === 0) && (t === 'chatmodes' || t === 'prompts' || t === 'instructions')) {
+  // If no specific names requested and the type is chatmodes, agents, prompts, instructions or skills, confirm installing all
+  if ((!names || names.length === 0) && (t === 'chatmodes' || t === 'agents' || t === 'prompts' || t === 'instructions' || t === 'skills')) {
       // When running non-interactively (no TTY), auto-confirm so CI/tests proceed
       const nonInteractive = !(process.stdin && process.stdin.isTTY);
       if (!nonInteractive) {
@@ -252,15 +252,15 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
 function installCommand(cli) {
   // Change signature so that names are variadic and type is provided via option to
   // avoid the ambiguity where the second positional arg would be parsed as `type`.
-  cli.command('install <target> [names...]', 'Install items into workspace or user profile. target: workspace|user. type: prompts|chatmodes|instructions|all')
-  .option('-t, --type <type>', 'Specify type: prompts|chatmodes|instructions|all')
+  cli.command('install <target> [names...]', 'Install items into workspace or user profile. target: workspace|user. type: prompts|chatmodes|agents|instructions|skills|all')
+  .option('-t, --type <type>', 'Specify type: prompts|chatmodes|agents|instructions|skills|all')
   // Note: --refresh is intentionally not a per-command option for install; use only with list/search
   .option('--referesh', "Alias for --refresh (typo alias)")
     .option('--dry-run', 'Show what would be installed without writing files')
     .action(async (target, names, options) => {
       // names may be undefined or an array. Support legacy positional type in case
       // the user still passed it as the first name (e.g. `install workspace prompts p1`).
-      const TYPES = ['prompts','chatmodes','instructions','all'];
+      const TYPES = ['prompts','chatmodes','agents','instructions','skills','all'];
       let type = options.type;
       // Normalize names to an array. Some CLI parsers may provide a single
       // name as a string instead of a one-element array. Preserve values.

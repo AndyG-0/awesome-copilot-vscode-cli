@@ -124,7 +124,7 @@ async function fetchIndex() {
 
   // fetch each repo's tree and build combined index
   try {
-    const combined = { prompts: [], chatmodes: [], instructions: [] };
+    const combined = { prompts: [], chatmodes: [], agents: [], instructions: [], skills: [] };
     for (const repo of repos) {
       if (!repo || !repo.treeUrl) continue;
       let res = null;
@@ -138,9 +138,9 @@ async function fetchIndex() {
         continue;
       }
       if (!res || res.status !== 200 || !res.data) continue;
-      // If the remote returned a pre-built index object (prompts/chatmodes/instructions),
+      // If the remote returned a pre-built index object (prompts/chatmodes/agents/instructions/skills),
       // honor it and return immediately (backwards compatibility + tests).
-      if (!Array.isArray(res.data.tree) && (res.data.prompts || res.data.chatmodes || res.data.instructions)) {
+      if (!Array.isArray(res.data.tree) && (res.data.prompts || res.data.chatmodes || res.data.agents || res.data.instructions || res.data.skills)) {
         // Remote returned a pre-built index object. Return it unmodified for
         // backwards compatibility and tests which expect the exact shape.
         idx = res.data;
@@ -155,7 +155,7 @@ async function fetchIndex() {
         const matches = tree.filter(t => t.path.startsWith(`${prefix}/`));
         const parts = await Promise.all(matches.map(async t => {
           const file = path.basename(t.path);
-          const base = file.replace(/\.prompt\.md$|\.chatmode\.md$|\.instructions?\.md$/i, '').replace(/\.md$/i, '');
+          const base = file.replace(/\.prompt\.md$|\.chatmode\.md$|\.agent\.md$|\.instructions?\.md$/i, '').replace(/\.md$/i, '');
           const id = base;
           let name = base.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
           const rawBase = (repo.rawBase || repo.url || '').replace(/\/$/, '');
@@ -176,12 +176,14 @@ async function fetchIndex() {
 
       combined.prompts.push(...(await makeEntriesForRepo('prompts')));
       combined.chatmodes.push(...(await makeEntriesForRepo('chatmodes')));
+      combined.agents.push(...(await makeEntriesForRepo('agents')));
       combined.instructions.push(...(await makeEntriesForRepo('instructions')));
+      combined.skills.push(...(await makeEntriesForRepo('skills')));
     }
 
     // detect id conflicts across repos
     const idCounts = new Map();
-    for (const cat of ['prompts','chatmodes','instructions']) {
+    for (const cat of ['prompts','chatmodes','agents','instructions','skills']) {
       for (const it of combined[cat]) {
         const k = it.id || it.name || '';
         if (!k) continue;
@@ -195,7 +197,7 @@ async function fetchIndex() {
 
   // If combined result is empty (no items found for any repo) and we have
   // a stale disk cache, prefer returning the disk payload as a fallback.
-  const totalItems = combined.prompts.length + combined.chatmodes.length + combined.instructions.length;
+  const totalItems = combined.prompts.length + combined.chatmodes.length + combined.agents.length + combined.instructions.length + combined.skills.length;
   if (totalItems === 0 && disk && disk.payload) return disk.payload;
 
   idx = combined;
