@@ -32,7 +32,7 @@ echo -e "${YELLOW}Starting release process...${NC}"
 
 # Check if working directory is clean
 if [ -n "$(git status --porcelain)" ]; then
-    echo -e "${RED}Error: Working directory is not clean${NC}"
+    echo -e "${RED}Error: Working directory is not clean (uncommitted or untracked changes)${NC}"
     echo "Please commit or stash your changes before releasing."
     git status --short
     exit 1
