@@ -47,7 +47,7 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
         console.log('Updating cache for the first time... (use --refresh/--referesh to force refresh)');
       }
       
-      index = await fetchIndex();
+      index = await fetchIndex(options);
       cache.set(key, index);
     } catch (err) {
       console.error('Error fetching index:', err.message);
