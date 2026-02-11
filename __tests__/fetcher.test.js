@@ -99,11 +99,11 @@ describe('fetcher', () => {
 
     const idx = await fetchIndex();
 
-    // repos metadata should be present
-    expect(idx._repos).toEqual([
-      { id: 'r1', treeUrl: 'https://api/repo1', rawBase: 'https://raw1' },
-      { id: 'r2', treeUrl: 'https://api/repo2', rawBase: 'https://raw2' }
-    ]);
+    // repos metadata should be present - now includes the default awesome-copilot repo
+    expect(idx._repos).toHaveLength(3);
+    expect(idx._repos.map(r => r.id)).toEqual(expect.arrayContaining(['awesome-copilot', 'r1', 'r2']));
+    expect(idx._repos.some(r => r.id === 'r1' && r.treeUrl === 'https://api/repo1')).toBe(true);
+    expect(idx._repos.some(r => r.id === 'r2' && r.treeUrl === 'https://api/repo2')).toBe(true);
 
     // prompts should include items from both repos
     const pids = idx.prompts.map(p => `${p.repo}:${p.id}`).sort();

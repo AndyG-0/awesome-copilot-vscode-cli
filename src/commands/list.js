@@ -65,7 +65,7 @@ function listCommand(cli) {
             console.log('Updating cache for the first time... (use -r to force refresh)');
           }
           
-          index = await fetchIndex();
+          index = await fetchIndex(options);
           cache.set(key, index);
         } catch (err) {
           console.error('Failed to load index:', err.message);
