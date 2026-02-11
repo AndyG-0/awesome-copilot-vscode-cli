@@ -69,9 +69,9 @@ If tests fail:
 
 ## References
 
-- CI/CD Pipeline: [.github/workflows/ci.yml](.github/workflows/ci.yml)
-- Release Process: [scripts/release.sh](scripts/release.sh)
-- Quality Checks: [scripts/quality-checks.sh](scripts/quality-checks.sh)
+- CI/CD Pipeline: [.github/workflows/ci.yml](./workflows/ci.yml)
+- Release Process: [scripts/release.sh](../scripts/release.sh)
+- Quality Checks: [scripts/quality-checks.sh](../scripts/quality-checks.sh)
 
 ## Related Configuration Files
 
