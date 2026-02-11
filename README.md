@@ -157,10 +157,10 @@ When multiple repos contain files with the same `id`, the fetcher adds an `_conf
 Local repo file (acp-repos.json)
 -------------------------------
 
-In addition to `ACP_REPOS_JSON` the CLI will look for a file named `acp-repos.json` in the `~/.acp` directory and use it to populate the upstream repo list if the environment variable is not set. This file should contain the same JSON array format as `ACP_REPOS_JSON` and is useful for per-user configuration without exporting environment variables. **Like `ACP_REPOS_JSON`, the default awesome-copilot repo is always included alongside repos from this file unless you set `ACP_EXCLUDE_DEFAULT_REPO=true`.** Precedence when building the repos list is:
+In addition to `ACP_REPOS_JSON` the CLI will look for a file named `acp-repos.json` in a local configuration directory and use it to populate the upstream repo list if the environment variable is not set. In normal usage (when `NODE_ENV` is not `development` or `test`), this file is expected at `~/.acp/acp-repos.json`. When `NODE_ENV` is set to `development` or `test`, the CLI instead looks for `./acp-repos.json` in the current working directory; this behavior exists primarily to support local development and automated tests. This file should contain the same JSON array format as `ACP_REPOS_JSON` and is useful for per-user configuration without exporting environment variables. **Like `ACP_REPOS_JSON`, the default awesome-copilot repo is always included alongside repos from this file unless you set `ACP_EXCLUDE_DEFAULT_REPO=true`.** Precedence when building the repos list is:
 
 1. `ACP_REPOS_JSON` environment variable (highest priority) — default repo is always added
-2. `~/.acp/acp-repos.json` file (if `ACP_REPOS_JSON` not set) — default repo is always added
+2. Local `acp-repos.json` file (if `ACP_REPOS_JSON` not set): in `~/.acp/acp-repos.json` by default, or `./acp-repos.json` when `NODE_ENV` is `development` or `test` — default repo is always added
 3. Built-in default repo (github/awesome-copilot) — used as fallback
 
 To exclude the default awesome-copilot repo entirely, set the `ACP_EXCLUDE_DEFAULT_REPO` environment variable to `true` or `1`.
