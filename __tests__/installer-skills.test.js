@@ -72,7 +72,8 @@ This skill is for the user profile.`;
       // Verify the skill folder was created
       const skillFolder = path.join(dest, 'user-skill');
       expect(await fs.pathExists(skillFolder)).toBe(true);
-      expect(await fs.stat(skillFolder)).toHaveProperty('isDirectory');
+      const skillFolderStat = await fs.stat(skillFolder);
+      expect(skillFolderStat.isDirectory()).toBe(true);
       
       // Verify SKILL.md exists
       const skillMdPath = path.join(skillFolder, 'SKILL.md');
