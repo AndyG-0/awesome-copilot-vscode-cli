@@ -51,7 +51,8 @@ function searchCommand(cli) {
           if (name.includes(q) || JSON.stringify(item).toLowerCase().includes(q)) {
             const rawId = item.id || item.name;
             const conflicts = (index && index._conflicts) ? new Set(index._conflicts) : new Set();
-            const id = (conflicts.has(rawId) && item.repo) ? `${item.repo}:${rawId}` : rawId;
+            // Use hierarchical ID format (repo:type:id) when there's a conflict
+            const id = (conflicts.has(rawId) && item.repo) ? `${item.repo}:${cat.slice(0,-1)}:${rawId}` : rawId;
             const res = { type: cat.slice(0,-1), id, name: item.name };
             if (options && options.verbose) console.log('verbose: match', res);
             results.push(res);
@@ -80,7 +81,8 @@ function searchIndex(index, query) {
       if (name.includes(q) || JSON.stringify(item).toLowerCase().includes(q)) {
         const rawId = item.id || item.name;
         const conflicts = (index && index._conflicts) ? new Set(index._conflicts) : new Set();
-        const id = (conflicts.has(rawId) && item.repo) ? `${item.repo}:${rawId}` : rawId;
+        // Use hierarchical ID format (repo:type:id) when there's a conflict
+        const id = (conflicts.has(rawId) && item.repo) ? `${item.repo}:${cat.slice(0,-1)}:${rawId}` : rawId;
         results.push({ type: cat.slice(0,-1), id, name: item.name });
       }
     });

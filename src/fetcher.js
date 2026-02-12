@@ -242,7 +242,8 @@ async function fetchIndex(options) {
         log('repo ' + repo.id + ' response does not contain tree array, skipping', verbose);
         continue;
       }
-      const tree = res.data.tree.filter(t => t.type === 'blob');
+      // Filter for blob entries, excluding symlinks (mode 120000) which would create duplicates
+      const tree = res.data.tree.filter(t => t.type === 'blob' && t.mode !== '120000');
       log('repo ' + repo.id + ' has ' + tree.length + ' blob items', verbose);
 
       const makeEntriesForRepo = async prefix => {
@@ -275,31 +276,116 @@ async function fetchIndex(options) {
         return parts;
       };
 
+      const makeSkillEntriesForRepo = async () => {
+        // Match SKILL.md files in skills folders at any depth: e.g., "skills/skill-name/SKILL.md"
+        const skillRegex = new RegExp(`(^|/)skills/[^/]+/SKILL\\.md$`, 'i');
+        const matches = tree.filter(t => skillRegex.test(t.path) && t.type === 'blob');
+        log('repo ' + repo.id + ': found ' + matches.length + ' skill folders (searched at any depth)', verbose);
+        const parts = await Promise.all(matches.map(async t => {
+          // Extract the skill folder name from path like "skills/skill-name/SKILL.md" or ".github/skills/skill-name/SKILL.md"
+          const pathParts = t.path.split('/');
+          const skillMdIndex = pathParts.findIndex(p => p.toLowerCase() === 'skill.md');
+          const skillFolderName = pathParts[skillMdIndex - 1];
+          const skillFolderPath = t.path.replace(/SKILL\.md$/i, '').replace(/\/$/, '');
+          const id = skillFolderName;
+          let name = skillFolderName.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          let description = '';
+          const rawBase = (repo.rawBase || repo.url || '').replace(/\/$/, '');
+          const skillMdUrl = rawBase ? `${rawBase}/${t.path}` : null;
+          
+          // Gather all files in the skill folder
+          const skillFiles = tree.filter(file => file.path.startsWith(skillFolderPath + '/') && file.type === 'blob');
+          const files = skillFiles.map(file => ({
+            path: file.path,
+            url: rawBase ? `${rawBase}/${file.path}` : null
+          }));
+          
+          if (skillMdUrl) {
+            try {
+              const r = await axios.get(skillMdUrl, { timeout: 5000, headers: { 'User-Agent': 'acp-vscode-cli' } });
+              const content = r.data;
+              // Parse frontmatter to extract name and description
+              if (content.startsWith('---')) {
+                const endIndex = content.indexOf('\n---', 3);
+                if (endIndex !== -1) {
+                  const frontmatter = content.substring(3, endIndex).trim();
+                  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+                  const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+                  if (nameMatch) {
+                    name = nameMatch[1].trim();
+                    log('loaded name for skill ' + id + ': ' + name, verbose);
+                  }
+                  if (descMatch) {
+                    description = descMatch[1].trim();
+                    log('loaded description for skill ' + id, verbose);
+                  }
+                }
+              }
+            } catch (e) {
+              log('failed to fetch SKILL.md for ' + id + ': ' + e.message, verbose);
+              // keep fallback name and empty description
+            }
+          }
+          log('collected ' + files.length + ' files for skill ' + id, verbose);
+          // Return skill entry with all files so installer can copy the entire folder structure
+          return { id, name, description, path: t.path, folderPath: skillFolderPath, url: skillMdUrl, repo: repo.id, isFolder: true, files };
+        }));
+        return parts;
+      };
+
       combined.prompts.push(...(await makeEntriesForRepo('prompts')));
       combined.chatmodes.push(...(await makeEntriesForRepo('chatmodes')));
       combined.agents.push(...(await makeEntriesForRepo('agents')));
       combined.instructions.push(...(await makeEntriesForRepo('instructions')));
-      combined.skills.push(...(await makeEntriesForRepo('skills')));
+      combined.skills.push(...(await makeSkillEntriesForRepo()));
     }
 
-    // detect id conflicts across repos
-    log('detecting conflicts across repos...', verbose);
-    const idCounts = new Map();
-    for (const cat of ['prompts','chatmodes','agents','instructions','skills']) {
-      for (const it of combined[cat]) {
-        const k = it.id || it.name || '';
-        if (!k) continue;
-        idCounts.set(k, (idCounts.get(k) || 0) + 1);
+    // detect id conflicts at repo and type levels
+    log('detecting conflicts (repo-level and type-level)...', verbose);
+    const idRepoTypeMap = new Map(); // Maps "id" -> Map of "repo:type" -> count
+    
+    for (const type of ['prompts','chatmodes','agents','instructions','skills']) {
+      for (const item of combined[type]) {
+        const id = item.id || item.name || '';
+        if (!id) continue;
+        
+        const key = `${item.repo}:${type}`;
+        if (!idRepoTypeMap.has(id)) {
+          idRepoTypeMap.set(id, new Map());
+        }
+        idRepoTypeMap.get(id).set(key, (idRepoTypeMap.get(id).get(key) || 0) + 1);
       }
     }
-    const conflicts = [];
-    for (const [key, cnt] of idCounts.entries()) {
-      if (cnt > 1) {
-        conflicts.push(key);
-        log('conflict detected: ' + key + ' appears ' + cnt + ' times', verbose);
+    
+    // Determine which IDs need prefixing (repo-level or type-level conflicts)
+    const conflicts = new Set();
+    for (const [id, repoTypeMap] of idRepoTypeMap.entries()) {
+      // Group by type to check if same type appears in multiple repos
+      const typeToRepos = new Map();
+      for (const repoType of repoTypeMap.keys()) {
+        const [repo, type] = repoType.split(':');
+        if (!typeToRepos.has(type)) {
+          typeToRepos.set(type, new Set());
+        }
+        typeToRepos.get(type).add(repo);
+      }
+      
+      // Check for repo-level conflict: same ID, same type, different repos
+      for (const [type, repos] of typeToRepos.entries()) {
+        if (repos.size > 1) {
+          conflicts.add(id);
+          log(`repo-level conflict: ${id} (${type}) in repos: ${Array.from(repos).join(', ')}`, verbose);
+        }
+      }
+      
+      // Check for type-level conflict: same ID, multiple types
+      if (typeToRepos.size > 1) {
+        conflicts.add(id);
+        const types = Array.from(typeToRepos.keys()).join(', ');
+        log(`type-level conflict: ${id} appears in types: ${types}`, verbose);
       }
     }
-    if (conflicts.length === 0) {
+    if (conflicts.size === 0) {
       log('no conflicts detected', verbose);
     }
 
@@ -314,7 +400,7 @@ async function fetchIndex(options) {
 
   idx = combined;
   idx._repos = repos.map(r => ({ id: r.id, treeUrl: r.treeUrl, rawBase: r.rawBase || r.url }));
-  idx._conflicts = conflicts;
+  idx._conflicts = Array.from(conflicts); // Convert Set to array for JSON serialization
   cache.set(key, idx);
   await writeDiskCache(idx, verbose);
   log('index successfully built and cached', verbose);
