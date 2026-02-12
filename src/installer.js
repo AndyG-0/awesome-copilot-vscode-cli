@@ -25,6 +25,22 @@ function getVsCodeUserDir() {
   return path.join(home, '.config', 'Code', 'User');
 }
 
+// Helper to sanitize folder names to prevent path traversal attacks
+function makeSafeFolderName(rawName) {
+  let safe = rawName || '';
+  // Replace any path separators with a dash so we don't create nested or absolute paths
+  safe = safe.replace(/[\\/]+/g, '-');
+  // Remove leading dots so values like "." or ".." don't become special path segments
+  safe = safe.replace(/^\.+/, '');
+  // Strip a leading Windows drive prefix like "C:\" or "D:/"
+  safe = safe.replace(/^[A-Za-z]:[-\\/]?/, '');
+  safe = safe.trim();
+  if (!safe) {
+    safe = 'skill';
+  }
+  return safe;
+}
+
 async function installFiles({ items, type, target, workspaceDir }) {
   // type: prompts|chatmodes|agents|instructions|skills
   // Helper to derive filename and extension
@@ -67,20 +83,6 @@ async function installFiles({ items, type, target, workspaceDir }) {
       await fs.ensureDir(base);
       // detect duplicate ids so we can disambiguate folder names by prefixing
       const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
-      const makeSafeFolderName = rawName => {
-        let safe = rawName || '';
-        // Replace any path separators with a dash so we don't create nested or absolute paths
-        safe = safe.replace(/[\\/]+/g, '-');
-        // Remove leading dots so values like "." or ".." don't become special path segments
-        safe = safe.replace(/^\.+/, '');
-        // Strip a leading Windows drive prefix like "C:\" or "D:/"
-        safe = safe.replace(/^[A-Za-z]:[-\\/]?/, '');
-        safe = safe.trim();
-        if (!safe) {
-          safe = 'skill';
-        }
-        return safe;
-      };
       for (const item of items) {
         const baseName = item.id || item.name || `skill-${Date.now()}`;
         let folderName = baseName;
@@ -154,20 +156,6 @@ async function installFiles({ items, type, target, workspaceDir }) {
     await fs.ensureDir(base);
     // detect duplicates among items to avoid overwriting
     const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
-    const makeSafeFolderName = rawName => {
-      let safe = rawName || '';
-      // Replace any path separators with a dash so we don't create nested or absolute paths
-      safe = safe.replace(/[\\/]+/g, '-');
-      // Remove leading dots so values like "." or ".." don't become special path segments
-      safe = safe.replace(/^\.+/, '');
-      // Strip a leading Windows drive prefix like "C:\" or "D:/"
-      safe = safe.replace(/^[A-Za-z]:[-\\/]?/, '');
-      safe = safe.trim();
-      if (!safe) {
-        safe = 'skill';
-      }
-      return safe;
-    };
     for (const item of items) {
       const baseName = item.id || item.name || `skill-${Date.now()}`;
       let folderName = baseName;
@@ -375,6 +363,8 @@ async function removeFiles({ names, type, target, workspaceDir }) {
           if (parts.length === 3) {
             const [repo, typeSegment, id] = parts;
             // only match repo:type:id when the type segment matches the current type (or its singular form)
+            // Note: singularization assumes regular English plurals (e.g., prompts->prompt, skills->skill)
+            // which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
             const singularType = type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
             if (typeSegment !== type && typeSegment !== singularType) {
               return false;
@@ -421,6 +411,8 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (parts.length === 3) {
           const [repo, typeSegment, id] = parts;
           // only match repo:type:id when the type segment matches the current type (or its singular form)
+          // Note: singularization assumes regular English plurals (e.g., prompts->prompt, skills->skill)
+          // which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
           const singularType = type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
           if (typeSegment !== type && typeSegment !== singularType) {
             return false;
