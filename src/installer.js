@@ -25,6 +25,43 @@ function getVsCodeUserDir() {
   return path.join(home, '.config', 'Code', 'User');
 }
 
+// Helper to sanitize folder names to prevent path traversal attacks
+function makeSafeFolderName(rawName) {
+  // Ensure rawName is a string
+  if (typeof rawName !== 'string') {
+    rawName = rawName ? String(rawName) : '';
+  }
+  let safe = rawName || '';
+  // Replace any path separators with a dash so we don't create nested or absolute paths
+  safe = safe.replace(/[\\/]+/g, '-');
+  // Remove leading dots so values like "." or ".." don't become special path segments
+  safe = safe.replace(/^\.+/, '');
+  // Strip a leading Windows drive prefix like "C:\" or "D:/"
+  safe = safe.replace(/^[A-Za-z]:[-\\/]?/, '');
+  safe = safe.trim();
+  if (!safe) {
+    safe = 'skill';
+  }
+  return safe;
+}
+
+// Helper to get singular form of type for hierarchical ID matching
+// Note: Assumes regular English plurals (e.g., prompts->prompt, skills->skill)
+// which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
+function getSingularType(type) {
+  if (!type || typeof type !== 'string') {
+    return type;
+  }
+  return type.endsWith('s') ? type.slice(0, -1) : type;
+}
+
+// Helper to check if a type segment matches the expected type (including singular form)
+function isTypeMatch(typeSegment, expectedType) {
+  if (typeSegment === expectedType) return true;
+  const singularType = getSingularType(expectedType);
+  return typeSegment === singularType;
+}
+
 async function installFiles({ items, type, target, workspaceDir }) {
   // type: prompts|chatmodes|agents|instructions|skills
   // Helper to derive filename and extension
@@ -68,11 +105,13 @@ async function installFiles({ items, type, target, workspaceDir }) {
       // detect duplicate ids so we can disambiguate folder names by prefixing
       const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
       for (const item of items) {
-        let folderName = item.id || item.name || `skill-${Date.now()}`;
-        if (idCounts[folderName] > 1 && item.repo) {
+        const baseName = item.id || item.name || `skill-${Date.now()}`;
+        let folderName = baseName;
+        if (idCounts[baseName] > 1 && item.repo) {
           // prefix with repo to avoid overwriting folders when multiple repos have the same id
-          folderName = `${item.repo}-${folderName}`;
+          folderName = `${item.repo}-${baseName}`;
         }
+        folderName = makeSafeFolderName(folderName);
         const skillFolderPath = path.join(base, folderName);
         await fs.ensureDir(skillFolderPath);
         
@@ -91,6 +130,11 @@ async function installFiles({ items, type, target, workspaceDir }) {
             // Remove any leading path separators so the path remains relative
             while (safeRelativePath.startsWith(path.sep) || safeRelativePath.startsWith('/')) {
               safeRelativePath = safeRelativePath.slice(1);
+            }
+            // Check if the path is absolute (including Windows paths like C:\...)
+            if (path.isAbsolute(safeRelativePath)) {
+              console.warn(`Skipping absolute path: ${fileInfo.path}`);
+              continue;
             }
             // After normalization, disallow any attempts to escape the skill folder
             if (
@@ -111,7 +155,7 @@ async function installFiles({ items, type, target, workspaceDir }) {
             // Fetch and write file
             const fileContent = await fetchFileContent(fileInfo);
             
-            if (fileContent) {
+            if (fileContent !== null && fileContent !== undefined) {
               const contentStr = typeof fileContent !== 'string' ? JSON.stringify(fileContent, null, 2) : fileContent;
               await fs.writeFile(filePath, contentStr, 'utf8');
             }
@@ -134,8 +178,10 @@ async function installFiles({ items, type, target, workspaceDir }) {
     // detect duplicates among items to avoid overwriting
     const idCounts = items.reduce((m, it) => { const k = it.id || it.name || ''; m[k] = (m[k] || 0) + 1; return m; }, {});
     for (const item of items) {
-      let folderName = item.id || item.name || `skill-${Date.now()}`;
-      if (idCounts[folderName] > 1 && item.repo) folderName = `${item.repo}-${folderName}`;
+      const baseName = item.id || item.name || `skill-${Date.now()}`;
+      let folderName = baseName;
+      if (idCounts[baseName] > 1 && item.repo) folderName = `${item.repo}-${baseName}`;
+      folderName = makeSafeFolderName(folderName);
       const skillFolderPath = path.join(base, folderName);
       await fs.ensureDir(skillFolderPath);
       
@@ -153,6 +199,11 @@ async function installFiles({ items, type, target, workspaceDir }) {
           // Remove any leading path separators so the path remains relative
           while (safeRelativePath.startsWith(path.sep) || safeRelativePath.startsWith('/')) {
             safeRelativePath = safeRelativePath.slice(1);
+          }
+          // Check if the path is absolute (including Windows paths like C:\...)
+          if (path.isAbsolute(safeRelativePath)) {
+            console.warn(`Skipping absolute path: ${fileInfo.path}`);
+            continue;
           }
           // After normalization, disallow any attempts to escape the skill folder
           if (
@@ -173,7 +224,7 @@ async function installFiles({ items, type, target, workspaceDir }) {
           // Fetch and write file
           const fileContent = await fetchFileContent(fileInfo);
           
-          if (fileContent) {
+          if (fileContent !== null && fileContent !== undefined) {
             const contentStr = typeof fileContent !== 'string' ? JSON.stringify(fileContent, null, 2) : fileContent;
             await fs.writeFile(filePath, contentStr, 'utf8');
           }
@@ -248,9 +299,9 @@ async function removeFiles({ names, type, target, workspaceDir }) {
             // repo-qualified incoming name like "repo:type:skill-id" or "repo:skill-id" (legacy)
             const parts = n.split(':');
             if (parts.length === 3) {
-              const repo = parts[0];
-              const id = parts[2];
-              // For skills, type should be 'skill'
+              const [repo, typePart, id] = parts;
+              // For skills, type must match 'skills' or its singular form 'skill'
+              if (!isTypeMatch(typePart, 'skills')) return false;
               return d === id || d === `${repo}-${id}`;
             } else if (parts.length === 2) {
               const [repo, id] = parts;
@@ -283,11 +334,9 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (n.includes(':')) {
           const parts = n.split(':');
           if (parts.length === 3) {
-            const repo = parts[0];
-            const type = parts[1];
-            const id = parts[2];
-            // For skills, type must be 'skill'
-            if (type !== 'skill') return false;
+            const [repo, typePart, id] = parts;
+            // For skills, type must match 'skills' or its singular form 'skill'
+            if (!isTypeMatch(typePart, 'skills')) return false;
             return d === id || d === `${repo}-${id}`;
           } else if (parts.length === 2) {
             const [repo, id] = parts;
@@ -329,9 +378,12 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (n.includes(':')) {
           const parts = n.split(':');
           if (parts.length === 3) {
-            const repo = parts[0];
-            const id = parts[2];
-            return n === fileId || (content && content.repo === repo && (strippedFileId === id));
+            const [repo, typeSegment, id] = parts;
+            // only match repo:type:id when the type segment matches the current type (or its singular form)
+            if (!isTypeMatch(typeSegment, type)) {
+              return false;
+            }
+            return n === fileId || (content && content.repo === repo && strippedFileId === id);
           } else if (parts.length === 2) {
             // Legacy format: repo:id
             const [repo, id] = parts;
@@ -371,8 +423,11 @@ async function removeFiles({ names, type, target, workspaceDir }) {
       if (n.includes(':')) {
         const parts = n.split(':');
         if (parts.length === 3) {
-          const repo = parts[0];
-          const id = parts[2];
+          const [repo, typeSegment, id] = parts;
+          // only match repo:type:id when the type segment matches the current type (or its singular form)
+          if (!isTypeMatch(typeSegment, type)) {
+            return false;
+          }
           return n === fileId || (content && content.repo === repo && (strippedFileId === id));
         } else if (parts.length === 2) {
           const [repo, id] = parts;
