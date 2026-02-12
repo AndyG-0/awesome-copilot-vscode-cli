@@ -27,6 +27,10 @@ function getVsCodeUserDir() {
 
 // Helper to sanitize folder names to prevent path traversal attacks
 function makeSafeFolderName(rawName) {
+  // Ensure rawName is a string
+  if (typeof rawName !== 'string') {
+    rawName = rawName ? String(rawName) : '';
+  }
   let safe = rawName || '';
   // Replace any path separators with a dash so we don't create nested or absolute paths
   safe = safe.replace(/[\\/]+/g, '-');
@@ -45,7 +49,17 @@ function makeSafeFolderName(rawName) {
 // Note: Assumes regular English plurals (e.g., prompts->prompt, skills->skill)
 // which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
 function getSingularType(type) {
-  return type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
+  if (!type || typeof type !== 'string') {
+    return type;
+  }
+  return type.endsWith('s') ? type.slice(0, -1) : type;
+}
+
+// Helper to check if a type segment matches the expected type (including singular form)
+function isTypeMatch(typeSegment, expectedType) {
+  if (typeSegment === expectedType) return true;
+  const singularType = getSingularType(expectedType);
+  return typeSegment === singularType;
 }
 
 async function installFiles({ items, type, target, workspaceDir }) {
@@ -287,8 +301,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
             if (parts.length === 3) {
               const [repo, typePart, id] = parts;
               // For skills, type must match 'skills' or its singular form 'skill'
-              const singularType = getSingularType('skills');
-              if (typePart !== 'skills' && typePart !== singularType) return false;
+              if (!isTypeMatch(typePart, 'skills')) return false;
               return d === id || d === `${repo}-${id}`;
             } else if (parts.length === 2) {
               const [repo, id] = parts;
@@ -323,8 +336,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
           if (parts.length === 3) {
             const [repo, typePart, id] = parts;
             // For skills, type must match 'skills' or its singular form 'skill'
-            const singularType = getSingularType('skills');
-            if (typePart !== 'skills' && typePart !== singularType) return false;
+            if (!isTypeMatch(typePart, 'skills')) return false;
             return d === id || d === `${repo}-${id}`;
           } else if (parts.length === 2) {
             const [repo, id] = parts;
@@ -368,8 +380,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
           if (parts.length === 3) {
             const [repo, typeSegment, id] = parts;
             // only match repo:type:id when the type segment matches the current type (or its singular form)
-            const singularType = getSingularType(type);
-            if (typeSegment !== type && typeSegment !== singularType) {
+            if (!isTypeMatch(typeSegment, type)) {
               return false;
             }
             return n === fileId || (content && content.repo === repo && strippedFileId === id);
@@ -414,8 +425,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (parts.length === 3) {
           const [repo, typeSegment, id] = parts;
           // only match repo:type:id when the type segment matches the current type (or its singular form)
-          const singularType = getSingularType(type);
-          if (typeSegment !== type && typeSegment !== singularType) {
+          if (!isTypeMatch(typeSegment, type)) {
             return false;
           }
           return n === fileId || (content && content.repo === repo && (strippedFileId === id));
