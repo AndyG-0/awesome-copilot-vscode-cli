@@ -9,6 +9,6 @@ test('searchIndex returns results with repo-qualified ids when conflicts exist',
   };
   const res = searchIndex(idx, 'shared');
   expect(res.length).toBe(1);
-  expect(res[0].id).toBe('r1:shared');
+  expect(res[0].id).toBe('r1:prompt:shared');
   expect(res[0].type).toBe('prompt');
 });

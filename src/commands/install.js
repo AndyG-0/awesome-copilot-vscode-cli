@@ -66,8 +66,9 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
     const ambiguous = [];
     for (const given of names) {
       const g = (given || '').toLowerCase();
-      // support repo-qualified id: <repo_id>:<file_id>
+      // support repo-qualified id: <repo>:<type>:<id> or <repo>:<id> (legacy)
       const parts = given && given.includes(':') ? given.split(':') : null;
+      const repoTypeQualified = parts && parts.length === 3;
       const repoQualified = parts && parts.length === 2;
       // collect exact matches across types
       // collect exact matches across types, grouping by type
@@ -77,7 +78,12 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
         for (const it of arr) {
           const id = (it.id || it.name || '').toLowerCase();
           const name = (it.name || it.id || '').toLowerCase();
-          if (repoQualified) {
+          if (repoTypeQualified) {
+            const [r, typeStr, fid] = parts;
+            // type from ID should match current type (singular form)
+            const typeSingular = tt === 'chatmodes' ? 'chatmode' : tt === 'agents' ? 'agent' : tt === 'instructions' ? 'instruction' : tt === 'prompts' ? 'prompt' : 'skill';
+            if (it.repo === r && typeStr === typeSingular && (id === fid.toLowerCase() || name === fid.toLowerCase())) exactMatches.push({ type: tt, item: it });
+          } else if (repoQualified) {
             const [r, fid] = parts;
             if (it.repo === r && (id === fid.toLowerCase() || name === fid.toLowerCase())) exactMatches.push({ type: tt, item: it });
           } else {
@@ -115,7 +121,11 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
         for (const it of arr) {
           const id = (it.id || it.name || '').toLowerCase();
           const name = (it.name || it.id || '').toLowerCase();
-          if (repoQualified) {
+          if (repoTypeQualified) {
+            const [r, typeStr, fid] = parts;
+            const typeSingular = tt === 'chatmodes' ? 'chatmode' : tt === 'agents' ? 'agent' : tt === 'instructions' ? 'instruction' : tt === 'prompts' ? 'prompt' : 'skill';
+            if (it.repo === r && typeStr === typeSingular && (id.startsWith(fid.toLowerCase()) || name.startsWith(fid.toLowerCase()))) startsMatches.push({ type: tt, item: it });
+          } else if (repoQualified) {
             const [r, fid] = parts;
             if (it.repo === r && (id.startsWith(fid.toLowerCase()) || name.startsWith(fid.toLowerCase()))) startsMatches.push({ type: tt, item: it });
           } else {
@@ -159,11 +169,16 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
       for (const given of names) {
         const g = (given || '').toLowerCase();
         const parts = given && given.includes(':') ? given.split(':') : null;
+        const repoTypeQualified = parts && parts.length === 3;
         const repoQualified = parts && parts.length === 2;
         const exact = items.filter(it => {
           const id = (it.id || it.name || '').toLowerCase();
           const name = (it.name || it.id || '').toLowerCase();
-          if (repoQualified) {
+          if (repoTypeQualified) {
+            const [r, typeStr, fid] = parts;
+            const typeSingular = t === 'chatmodes' ? 'chatmode' : t === 'agents' ? 'agent' : t === 'instructions' ? 'instruction' : t === 'prompts' ? 'prompt' : 'skill';
+            return it.repo === r && typeStr === typeSingular && (id === fid.toLowerCase() || name === fid.toLowerCase());
+          } else if (repoQualified) {
             const [r, fid] = parts;
             return it.repo === r && (id === fid.toLowerCase() || name === fid.toLowerCase());
           }
@@ -181,7 +196,11 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
         const starts = items.filter(it => {
           const id = (it.id || it.name || '').toLowerCase();
           const name = (it.name || it.id || '').toLowerCase();
-          if (repoQualified) {
+          if (repoTypeQualified) {
+            const [r, typeStr, fid] = parts;
+            const typeSingular = t === 'chatmodes' ? 'chatmode' : t === 'agents' ? 'agent' : t === 'instructions' ? 'instruction' : t === 'prompts' ? 'prompt' : 'skill';
+            return it.repo === r && typeStr === typeSingular && (id.startsWith(fid.toLowerCase()) || name.startsWith(fid.toLowerCase()));
+          } else if (repoQualified) {
             const [r, fid] = parts;
             return it.repo === r && (id.startsWith(fid.toLowerCase()) || name.startsWith(fid.toLowerCase()));
           }
@@ -259,27 +278,41 @@ async function performInstall({ target, type, names, options, workspaceDir = pro
 function installCommand(cli) {
   // Change signature so that names are variadic and type is provided via option to
   // avoid the ambiguity where the second positional arg would be parsed as `type`.
-  cli.command('install <target> [names...]', 'Install items into workspace or user profile. target: workspace|user. type: prompts|chatmodes|agents|instructions|skills|all')
-  .option('-t, --type <type>', 'Specify type: prompts|chatmodes|agents|instructions|skills|all')
+  cli.command('install <target> [names...]', 'Install prompts, chatmodes, agents, instructions, or skills')
+  .option('-t, --type <type>', 'Specify type: prompts|chatmodes|agents|instructions|skills|all (default: all)')
   // Note: --refresh is intentionally not a per-command option for install; use only with list/search
   .option('--referesh', "Alias for --refresh (typo alias)")
-    .option('--dry-run', 'Show what would be installed without writing files')
-    .action(async (target, names, options) => {
-      // names may be undefined or an array. Support legacy positional type in case
-      // the user still passed it as the first name (e.g. `install workspace prompts p1`).
-      const TYPES = ['prompts','chatmodes','agents','instructions','skills','all'];
-      let type = options.type;
-      // Normalize names to an array. Some CLI parsers may provide a single
-      // name as a string instead of a one-element array. Preserve values.
-      let nm;
-      if (names === undefined || names === null) nm = [];
-      else if (Array.isArray(names)) nm = names.slice();
-      else nm = [names];
-      if (!type && nm.length > 0 && TYPES.includes(nm[0])) {
-        type = nm.shift();
-      }
-      await performInstall({ target, type, names: nm, options, workspaceDir: process.cwd() });
-    });
+  .option('--dry-run', 'Show what would be installed without writing files')
+  .example('acp-vscode install workspace               # Install interactively to workspace')
+  .example('acp-vscode install user --type prompts     # Install all prompts to user profile')
+  .example('acp-vscode install prompts                 # Install all prompts to workspace')
+  .example("acp-vscode install workspace 'My Prompt'   # Install specific item to workspace")
+  .example('acp-vscode install my-package-id           # Install package by id to workspace')
+  .example('')
+  .example('<target> can be:')
+  .example('  workspace        Install to current workspace (.github folder) Default if not passed')
+  .example('  user             Install to VS Code user profile')
+  .example('  <type>           One of: prompts|chatmodes|agents|instructions|skills|all')
+  .example('                   (installs all items of that type to workspace)')
+  .example('  <package-name>   Package id/name (installs to workspace; supports repo:id or repo:type:id)')
+  .example('')
+  .example('[names...] optional item names to install (supports partial matching)')
+  .action(async (target, names, options) => {
+    // names may be undefined or an array. Support legacy positional type in case
+    // the user still passed it as the first name (e.g. `install workspace prompts p1`).
+    const TYPES = ['prompts','chatmodes','agents','instructions','skills','all'];
+    let type = options.type;
+    // Normalize names to an array. Some CLI parsers may provide a single
+    // name as a string instead of a one-element array. Preserve values.
+    let nm;
+    if (names === undefined || names === null) nm = [];
+    else if (Array.isArray(names)) nm = names.slice();
+    else nm = [names];
+    if (!type && nm.length > 0 && TYPES.includes(nm[0])) {
+      type = nm.shift();
+    }
+    await performInstall({ target, type, names: nm, options, workspaceDir: process.cwd() });
+  });
 }
 
 module.exports = { installCommand, performInstall };

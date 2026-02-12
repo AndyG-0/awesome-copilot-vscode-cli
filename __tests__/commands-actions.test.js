@@ -5,6 +5,7 @@ function makeCli() {
     _action: null,
     command() { return cli; },
     option() { return cli; },
+    example() { return cli; },
     action(fn) { cli._action = fn; return cli; }
   };
   return cli;
