@@ -41,6 +41,13 @@ function makeSafeFolderName(rawName) {
   return safe;
 }
 
+// Helper to get singular form of type for hierarchical ID matching
+// Note: Assumes regular English plurals (e.g., prompts->prompt, skills->skill)
+// which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
+function getSingularType(type) {
+  return type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
+}
+
 async function installFiles({ items, type, target, workspaceDir }) {
   // type: prompts|chatmodes|agents|instructions|skills
   // Helper to derive filename and extension
@@ -278,11 +285,10 @@ async function removeFiles({ names, type, target, workspaceDir }) {
             // repo-qualified incoming name like "repo:type:skill-id" or "repo:skill-id" (legacy)
             const parts = n.split(':');
             if (parts.length === 3) {
-              const repo = parts[0];
-              const typePart = parts[1];
-              const id = parts[2];
-              // For skills, type must be 'skill'
-              if (typePart !== 'skill') return false;
+              const [repo, typePart, id] = parts;
+              // For skills, type must match 'skills' or its singular form 'skill'
+              const singularType = getSingularType('skills');
+              if (typePart !== 'skills' && typePart !== singularType) return false;
               return d === id || d === `${repo}-${id}`;
             } else if (parts.length === 2) {
               const [repo, id] = parts;
@@ -315,11 +321,10 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (n.includes(':')) {
           const parts = n.split(':');
           if (parts.length === 3) {
-            const repo = parts[0];
-            const type = parts[1];
-            const id = parts[2];
-            // For skills, type must be 'skill'
-            if (type !== 'skill') return false;
+            const [repo, typePart, id] = parts;
+            // For skills, type must match 'skills' or its singular form 'skill'
+            const singularType = getSingularType('skills');
+            if (typePart !== 'skills' && typePart !== singularType) return false;
             return d === id || d === `${repo}-${id}`;
           } else if (parts.length === 2) {
             const [repo, id] = parts;
@@ -363,9 +368,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
           if (parts.length === 3) {
             const [repo, typeSegment, id] = parts;
             // only match repo:type:id when the type segment matches the current type (or its singular form)
-            // Note: singularization assumes regular English plurals (e.g., prompts->prompt, skills->skill)
-            // which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
-            const singularType = type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
+            const singularType = getSingularType(type);
             if (typeSegment !== type && typeSegment !== singularType) {
               return false;
             }
@@ -411,9 +414,7 @@ async function removeFiles({ names, type, target, workspaceDir }) {
         if (parts.length === 3) {
           const [repo, typeSegment, id] = parts;
           // only match repo:type:id when the type segment matches the current type (or its singular form)
-          // Note: singularization assumes regular English plurals (e.g., prompts->prompt, skills->skill)
-          // which is appropriate for all current types: prompts, chatmodes, agents, instructions, skills
-          const singularType = type && typeof type === 'string' && type.endsWith('s') ? type.slice(0, -1) : type;
+          const singularType = getSingularType(type);
           if (typeSegment !== type && typeSegment !== singularType) {
             return false;
           }
